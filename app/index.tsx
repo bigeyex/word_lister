@@ -1,13 +1,30 @@
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useRootNavigationState } from 'expo-router';
+import { useAppSelector } from '@/store/hooks'
 import BookIcon from '@/assets/icons/BookIcon.svg';
 import Checkmark from '@/assets/icons/Checkmark.svg';
 import commonStyles from '@/constants/commonStyles';
 import theme from '@/constants/theme';
+import { useEffect } from 'react';
 
-export default function TabOneScreen() {
+export default function TaskScreen() {
+  const currentBookKey = useAppSelector(state => state.userProfile.currentBookKey)
+  const progressByBook = useAppSelector(state => state.userProfile.progressByBook)
+  console.log('userProgress', progressByBook);
+
+  const rootNavigationState = useRootNavigationState();
+  const navigatorReady = rootNavigationState?.key != null
+  useEffect(() => {
+    if (!navigatorReady) return
+    if (currentBookKey === '') {
+      router.navigate('/bookSelect')
+    }
+  }, [navigatorReady])
+  
+  
   return (
     <SafeAreaView style={commonStyles.masterContainer}>
         <View style={commonStyles.row}>
@@ -15,19 +32,21 @@ export default function TabOneScreen() {
                 <Text style={commonStyles.h1}>今日任务</Text>
                 <Text style={commonStyles.auxText}>第10/20天 日语N1单词</Text>
             </View>
-            <View style={styles.changeBookButton}>
+            <View style={styles.changeBookButton} onTouchEnd={() => router.navigate('/bookSelect')}>
                 {/* <Image source={require('@/assets/images/bookIcon.png')}/> */}
                 <BookIcon />
-                <Text style={{flex: 0}}>换书</Text>
+                <Text style={styles.changeBookButtonText}>换书</Text>
             </View>
         </View>
         <View style={styles.checkboxList}>
-            <View style={styles.checkboxListItem}>
+            
+              <View style={styles.checkboxListItem} onTouchEnd={() => router.navigate('/listDetail')}>
                 <View style={styles.checkboxListCheckboxSelected}>
                     <Checkmark/>
                 </View>
                 <Text style={styles.checkboxListText}>List 2</Text>
-            </View>
+              </View>
+            
             <View style={styles.checkboxListItem}>
                 <View style={styles.checkboxListCheckbox}>
                 </View>
@@ -59,7 +78,10 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     borderRadius: 18,
+  },
 
+  changeBookButtonText: {
+    color: theme.primaryBg,
   },
 
   checkboxList: {

@@ -1,103 +1,97 @@
-import { Image, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BackButton from '@/assets/icons/BackButton.svg';
 import BigBookIcon from '@/assets/icons/BigBookIcon.svg';
 import BigBookIconSelected from '@/assets/icons/BigBookIconSelected.svg';
 import MinusSign from '@/assets/icons/MinusSign.svg';
 import PlusSign from '@/assets/icons/PlusSign.svg';
+import CheckmarkAccent from '@/assets/icons/CheckmarkAccent.svg';
 import commonStyles from '@/constants/commonStyles';
 import theme from '@/constants/theme';
+import ModalHeader from '@/components/ModalHeader';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import WordBooks from '@/constants/wordBooks';
+import { setBookKey, setPlanDays, toggleClearProgress } from '@/store/bookList';
+import { changeUserBook } from '@/store/userProfile';
+import { router } from 'expo-router';
+import { persistor } from '@/store/store';
 
 export default function TabOneScreen() {
-  return (
-    <SafeAreaView style={commonStyles.masterContainer}>
-        <View style={styles.modalHeader}>
-            <View style={styles.backButton}>
-                <BackButton/>
-            </View>
-            <Text style={commonStyles.h1}>选择单词书</Text>
-        </View>
+    let selectedBookKey = useAppSelector(store => store.bookList.selectedBookKey)
+    let clearProgress = useAppSelector(store => store.bookList.clearProgress)
+    if(selectedBookKey === '') {
+        selectedBookKey = WordBooks[0].key
+    }
+    const planDays = useAppSelector(store => store.bookList.planDays)
+    const wordsPerDay = Math.ceil(WordBooks.filter(book => book.key === selectedBookKey)[0].wordCount / planDays)
+    const dispatch = useAppDispatch();
 
-        <ScrollView>
-            <View style={styles.bookGallary}>
-                <View style={styles.bookGallaryItemSelected}>
-                    <Text style={styles.bookGallaryTitleSelected}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIconSelected/>
-                </View>
-                <View style={styles.bookGallaryItem}>
-                    <Text style={styles.bookGallaryTitle}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIcon/>
-                </View>
-                <View style={styles.bookGallaryItem}>
-                    <Text style={styles.bookGallaryTitle}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIcon/>
-                </View>
-                <View style={styles.bookGallaryItem}>
-                    <Text style={styles.bookGallaryTitle}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIcon/>
-                </View>
-                <View style={styles.bookGallaryItem}>
-                    <Text style={styles.bookGallaryTitle}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIcon/>
-                </View>
-                <View style={styles.bookGallaryItem}>
-                    <Text style={styles.bookGallaryTitle}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIcon/>
-                </View>
-                <View style={styles.bookGallaryItem}>
-                    <Text style={styles.bookGallaryTitle}>日语N2单词</Text>
-                    <Text style={styles.bookGallarySubTitle}>1200词</Text>
-                    <BigBookIcon/>
-                </View>
+    const gallaryItems = WordBooks.map(item => {        
+        return <TouchableOpacity key={item.key}>
+            <View onTouchEnd={() => dispatch(setBookKey(item.key))} 
+                    style={selectedBookKey === item.key ? styles.bookGallaryItemSelected: styles.bookGallaryItem}>
+                <Text style={selectedBookKey === item.key ? styles.bookGallaryTitleSelected: styles.bookGallaryTitle}>{item.name}</Text>
+                <Text style={styles.bookGallarySubTitle}>{item.wordCount}词</Text>
+                { selectedBookKey === item.key ? <BigBookIconSelected/> : <BigBookIcon/> }
             </View>
-        </ScrollView>
+        </TouchableOpacity>
+    })
 
-        <View style={styles.bookSelectFooter}>
-            <View style={styles.planControl}>
-                <View style={commonStyles.fill}>
-                    <Text style={styles.planControlLabel}>希望多少天背完？</Text>
-                    <Text style={styles.planControlSubLabel}>每天30分钟，90个新单词</Text>
+    return (
+        <SafeAreaView style={commonStyles.masterContainer}>
+            <ModalHeader title="选择单词书"/>
+
+            <ScrollView>
+                <View style={styles.bookGallary}>
+                    {gallaryItems}
                 </View>
-                <View style={styles.planControlNumeric}>
-                    <MinusSign/>
-                    <TextInput keyboardType="numeric" style={styles.planControlNumberInput} defaultValue={"30"}/>
-                    <PlusSign/>
+            </ScrollView>
+
+            <View style={styles.bookSelectFooter}>
+                <View style={styles.planControl}>
+                    <View style={commonStyles.fill}>
+                        <Text style={styles.planControlLabel}>希望多少天背完？</Text>
+                        <Text style={styles.planControlSubLabel}>每天{wordsPerDay}个新单词</Text>
+                    </View>
+                    <View style={styles.planControlNumeric}>
+                        <TouchableOpacity><View style={styles.planControlNumericButton}
+                            onTouchEnd={() => dispatch(setPlanDays(planDays - 1))}><MinusSign/></View></TouchableOpacity>
+                        <TextInput keyboardType="numeric" style={styles.planControlNumberInput} defaultValue={'' + planDays}
+                            onChangeText={text => dispatch(setPlanDays(parseInt(text)))}/>
+                        <TouchableOpacity><View style={styles.planControlNumericButton}
+                            onTouchEnd={() => dispatch(setPlanDays(planDays + 1))}><PlusSign/></View></TouchableOpacity>
+                    </View>
                 </View>
+
+                <View style={styles.planControl}>
+                    <TouchableOpacity>
+                        <View style={clearProgress ? styles.clearProgressCheckboxSelected : styles.clearProgressCheckbox }
+                            onTouchEnd={() => dispatch(toggleClearProgress())}>
+                            { clearProgress ? <CheckmarkAccent/> : ''}
+                        </View>
+                    </TouchableOpacity>
+                    <Text style={styles.clearProgressText}>清除之前的进度</Text>
+                    
+                </View>
+
+                <TouchableOpacity>
+                    <View style={styles.bookSelectActionButton} onTouchEnd={() => {
+                        dispatch(changeUserBook({key: selectedBookKey, planDays: planDays, clearProgress: clearProgress}))
+                        router.back()
+                        }}>
+                        <Text style={styles.bookSelectActionText}>开始计划</Text>
+                    </View>
+                </TouchableOpacity>
+                
             </View>
-            <View style={styles.bookSelectActionButton}>
-                <Text style={styles.bookSelectActionText}>开始计划</Text>
-            </View>
-        </View>
-            
-    </SafeAreaView>
-  );
+                
+        </SafeAreaView>
+    );
 }
 
 
 const basicStyles = StyleSheet.create({
-    modalHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    
-    backButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: theme.secondaryBg,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
     bookGallary: {
         flex: 1,
         flexDirection: "row",
@@ -127,7 +121,7 @@ const basicStyles = StyleSheet.create({
 
 
     bookSelectFooter: {
-        gap: 16,
+        gap: 12,
     },
 
     planControl: {
@@ -149,7 +143,11 @@ const basicStyles = StyleSheet.create({
     planControlNumeric: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 2,
+    },
+
+    planControlNumericButton: {
+        padding: 10,
     },
 
     planControlNumberInput: {
@@ -160,6 +158,20 @@ const basicStyles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         textAlign: 'center',
+    },
+
+    clearProgressText: {
+        marginLeft: 10,
+        color: theme.dimmedTextColor,
+    },
+
+    clearProgressCheckbox: {
+        width: 28,
+        height: 28,
+        backgroundColor: theme.unselectedBg,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 10,
     },
 
     bookSelectActionButton: {
@@ -182,6 +194,11 @@ const styles = StyleSheet.create({
 
     bookGallaryItemSelected: {
         ...basicStyles.bookGallaryItem,
+        backgroundColor: theme.accentBg,
+    },
+
+    clearProgressCheckboxSelected: {
+        ...basicStyles.clearProgressCheckbox,
         backgroundColor: theme.accentBg,
     },
 
