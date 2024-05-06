@@ -1,4 +1,4 @@
-import { StyleSheet, ScrollView, Animated, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, Animated, TouchableOpacity, ActivityIndicator } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import FavIconSelected from '@/assets/icons/FavIconSelected.svg';
 import commonStyles from '@/constants/commonStyles';
 import theme from '@/constants/theme';
 import ModalHeader from '@/components/ModalHeader';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { TaskInfoType, WordListItemType, toggleFavorite } from '@/store/wordList';
 import { saveFavourite } from '@/store/userProfile';
@@ -23,34 +23,42 @@ export default function listDetailScreen() {
     const wordList:WordListItemType[] = useAppSelector(store => store.wordList.wordList)
     const taskInfo:TaskInfoType = useAppSelector(store => store.wordList.taskInfo)
     const scrollY = new Animated.Value(lastScrollY);
+    const loading = useAppSelector(store => store.wordList.loading)
     scrollY.addListener(v => lastScrollY=v.value)
     const dispatch = useAppDispatch();
+    useEffect(() => {
+        lastScrollY = 0;
+    }, [])
 
     return (
         <SafeAreaView style={commonStyles.masterContainer}>
-        <ModalHeader title={getTaskTitle(taskInfo.day, taskInfo.isRevisit)}/>
-        <Animated.ScrollView style={styles.scrollContainer} onScroll={Animated.event(
-                [{ nativeEvent: {contentOffset: {y: scrollY}}}], 
-                {useNativeDriver: true})}>
-            <View style={styles.upScrollGuide}>
-                <UpArrow />
-                <Text style={styles.upScrollGuideText}>向上滚动显示释义</Text>
-            </View>
-            <View style={styles.wordList}>
-                { wordList.map((data, index) => (
-                    <WordListItem favorited={data.favorited} key={index} word={data.name} detail={data.desc} scrollY={scrollY} wordIndex={data.wordIndex}/>
-                ))}
-            </View>
-            <TouchableOpacity>
-                <View style={styles.wordListFinishButton} onTouchEnd={() => {
-                    const day = taskInfo.isRevisit ? taskInfo.day : -1
-                    dispatch(finishTask({day: day}))
-                    router.back()
-                }}>
-                    <Text style={styles.wordListFinishButtonText}>完成列表</Text>
-                </View>
-            </TouchableOpacity>
-        </Animated.ScrollView>
+            <ModalHeader title={getTaskTitle(taskInfo.day, taskInfo.isRevisit)}/>
+            { loading ? 
+                <ActivityIndicator size="large" color={theme.accent}/>
+                :
+                <Animated.ScrollView style={styles.scrollContainer} onScroll={Animated.event(
+                        [{ nativeEvent: {contentOffset: {y: scrollY}}}], 
+                        {useNativeDriver: true})}>
+                    <View style={styles.upScrollGuide}>
+                        <UpArrow />
+                        <Text style={styles.upScrollGuideText}>向上滚动显示释义</Text>
+                    </View>
+                    <View style={styles.wordList}>
+                        { wordList.map((data, index) => (
+                            <WordListItem favorited={data.favorited} key={index} word={data.name} detail={data.desc} scrollY={scrollY} wordIndex={data.wordIndex}/>
+                        ))}
+                    </View>
+                    <TouchableOpacity>
+                        <View style={styles.wordListFinishButton} onTouchEnd={() => {
+                            const day = taskInfo.isRevisit ? taskInfo.day : -1
+                            dispatch(finishTask({day: day}))
+                            router.back()
+                        }}>
+                            <Text style={styles.wordListFinishButtonText}>完成列表</Text>
+                        </View>
+                    </TouchableOpacity>
+                </Animated.ScrollView>
+            }
         </SafeAreaView>
     );
 }

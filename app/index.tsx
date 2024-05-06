@@ -58,7 +58,8 @@ export default function TaskScreen() {
             <View style={styles.checkboxListCheckbox}>
             </View>
           }
-          <Text style={styles.checkboxListText}>{getTaskTitle(task.day, task.isRevisit)}</Text>
+          <Text style={disabled ? {...styles.checkboxListText, color: theme.dimmedTextColor} : styles.checkboxListText}>
+              {getTaskTitle(task.day, task.isRevisit)}</Text>
       </View>
     ))
   }

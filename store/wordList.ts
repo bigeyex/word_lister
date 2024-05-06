@@ -21,8 +21,9 @@ export type TaskInfoType = {day:number, isRevisit:boolean}
 export interface WordListStates {
     wordList: WordListItemType[]
     taskInfo: TaskInfoType 
+    loading: boolean
 }
-const initialState: WordListStates = { wordList: [], taskInfo: {day: 0, isRevisit: false} }
+const initialState: WordListStates = { wordList: [], taskInfo: {day: 0, isRevisit: false}, loading: true }
 
 export const wordListSlice = createSlice({
     name: 'wordList',
@@ -36,11 +37,14 @@ export const wordListSlice = createSlice({
             const index = action.payload
             state.wordList.filter(w => w.wordIndex === index)
                 .forEach(w => { w.favorited = !w.favorited })
-        }
+        },
+        setLoading: (state, action: PayloadAction<boolean>) => {
+            state.loading = action.payload
+        },
     }
 })
 
-export const { setWordList, toggleFavorite } = wordListSlice.actions
+export const { setWordList, toggleFavorite, setLoading } = wordListSlice.actions
 
 interface MakeWordListPayloadType { 
     bookKey: string, 
@@ -56,7 +60,7 @@ export const makeWordList = ({bookKey, planDays, dayIndex, isRevisit, favoratedI
     return async (dispatch, getState) => {
 
         console.log('making list', bookKey, planDays, dayIndex, isRevisit, favoratedIndices)
-
+        dispatch(setLoading(true))
         const wordBook = await dispatch(loadWordBook({ bookKey }))
         if (!wordBook) return
         const wordCount = wordBook.length
@@ -87,6 +91,7 @@ export const makeWordList = ({bookKey, planDays, dayIndex, isRevisit, favoratedI
             }
         }
         dispatch(setWordList({wordList: result, taskInfo: {day: dayIndex, isRevisit: isRevisit}}))
+        dispatch(setLoading(false))
     }
 }
 

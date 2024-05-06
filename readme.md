@@ -1,5 +1,4 @@
 # TODO
 
 - more languages
-- loading screen in word list
-- make an icon
+- 解决单词表无假名行问题
