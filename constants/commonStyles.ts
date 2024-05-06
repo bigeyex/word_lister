@@ -7,7 +7,6 @@ export default StyleSheet.create({
         flex: 1,
         marginVertical: 48,
         marginHorizontal: 32,
-        color: '#fff',
         gap: 28,
       },
       row: {

@@ -1,4 +1,4 @@
-import { StyleSheet, ScrollView, Animated } from 'react-native';
+import { StyleSheet, ScrollView, Animated, TouchableOpacity } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,51 +10,56 @@ import commonStyles from '@/constants/commonStyles';
 import theme from '@/constants/theme';
 import ModalHeader from '@/components/ModalHeader';
 import { useState } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { TaskInfoType, WordListItemType, toggleFavorite } from '@/store/wordList';
+import { saveFavourite } from '@/store/userProfile';
+import { finishTask, finishTaskInList } from '@/store/plan';
+import { getTaskTitle } from '@/constants/globals';
 
 const ScrollYToShowWord = 200;
+let lastScrollY = 0;
 
-export default function TabOneScreen() {
-
-    const scrollY = new Animated.Value(0);
-    const demoData = [
-        { word: 'インフォメーション', detail: ['information', '④【名】信息，通知，报告；问讯处'], selected: true },
-        { word: '足跡', detail: ['あしあと', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: 'この方', detail: ['information', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: 'きょうかん', detail: ['あしあと', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: '免除', detail: ['information', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: '法廷', detail: ['あしあと', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: '罵る', detail: ['information', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: '足跡', detail: ['あしあと', '④【名】信息，通知，报告；问讯处'], selected: false },
-        { word: 'この方', detail: ['information', '④【名】信息，通知，报告；问讯处'], selected: false },
-    ];
+export default function listDetailScreen() {
+    const wordList:WordListItemType[] = useAppSelector(store => store.wordList.wordList)
+    const taskInfo:TaskInfoType = useAppSelector(store => store.wordList.taskInfo)
+    const scrollY = new Animated.Value(lastScrollY);
+    scrollY.addListener(v => lastScrollY=v.value)
+    const dispatch = useAppDispatch();
 
     return (
         <SafeAreaView style={commonStyles.masterContainer}>
-        <ModalHeader title="List5"/>
+        <ModalHeader title={getTaskTitle(taskInfo.day, taskInfo.isRevisit)}/>
         <Animated.ScrollView style={styles.scrollContainer} onScroll={Animated.event(
                 [{ nativeEvent: {contentOffset: {y: scrollY}}}], 
-                {useNativeDriver: false})}>
+                {useNativeDriver: true})}>
             <View style={styles.upScrollGuide}>
                 <UpArrow />
                 <Text style={styles.upScrollGuideText}>向上滚动显示释义</Text>
             </View>
             <View style={styles.wordList}>
-                { demoData.map((data, index) => (
-                    <WordListItem selected={data.selected} key={index} word={data.word} detail={data.detail} scrollY={scrollY}/>
+                { wordList.map((data, index) => (
+                    <WordListItem favorited={data.favorited} key={index} word={data.name} detail={data.desc} scrollY={scrollY} wordIndex={data.wordIndex}/>
                 ))}
             </View>
-            <View style={styles.wordListFinishButton}>
-                <Text style={styles.wordListFinishButtonText}>完成列表</Text>
-            </View>
+            <TouchableOpacity>
+                <View style={styles.wordListFinishButton} onTouchEnd={() => {
+                    const day = taskInfo.isRevisit ? taskInfo.day : -1
+                    dispatch(finishTask({day: day}))
+                    router.back()
+                }}>
+                    <Text style={styles.wordListFinishButtonText}>完成列表</Text>
+                </View>
+            </TouchableOpacity>
         </Animated.ScrollView>
         </SafeAreaView>
     );
 }
 
-interface WordListItemProps {word: string, detail: string[], scrollY: Animated.Value, selected?: boolean};
-const WordListItem = ({word, detail, scrollY, selected=false}:WordListItemProps) => {
-    const detailText = detail.map((text, key) => <Text key={key}>{text}</Text>)
+interface WordListItemProps {word: string, detail: string[], scrollY: Animated.Value, wordIndex: number, favorited?: boolean};
+const WordListItem = ({word, detail, scrollY, wordIndex, favorited=false}:WordListItemProps) => {
+    const detailText = detail.map((text, key) => <Text key={key} style={styles.wordListDetailText}>{text}</Text>)
     const [selfLayoutY, setSelfLayoutY] = useState(0);
+    const dispatch = useAppDispatch();
     const animatedOpacityStyle = {
         opacity: scrollY.interpolate({
             inputRange: [ScrollYToShowWord+selfLayoutY, ScrollYToShowWord+selfLayoutY+20],
@@ -62,10 +67,18 @@ const WordListItem = ({word, detail, scrollY, selected=false}:WordListItemProps)
         })
     }
 
-    return <View style={styles.wordListItem} onLayout={(e) => { setSelfLayoutY(e.nativeEvent.layout.y) }}>
-        <View style={styles.wordListFavorateButton}>
-            {selected ? <FavIconSelected/> : <FavIcon/>}
-        </View>
+    return <View style={styles.wordListItem} 
+            onLayout={(e) => { setSelfLayoutY(e.nativeEvent.layout.y) }}
+            onTouchEnd={() => { 
+                dispatch(toggleFavorite(wordIndex))
+                dispatch(saveFavourite({wordIndex: wordIndex, isFavorated: !favorited}))
+            }}>
+        <TouchableOpacity>
+            <View style={styles.wordListFavorateButton}>
+                {favorited ? <FavIconSelected/> : <FavIcon/>}
+            </View>
+        </TouchableOpacity>
+        
         <Text style={styles.wordListWord}>{word}</Text>
         <Animated.View style={[styles.wordListDetail, animatedOpacityStyle]}>
             {detailText}
@@ -122,7 +135,8 @@ const styles = StyleSheet.create({
     wordListDetailText: {
         color: theme.textColor,
         fontSize: 14,
-        width: 164,
+        width: 140,
+        
     },
 
     wordListFinishButton: {

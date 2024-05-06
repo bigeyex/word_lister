@@ -1,36 +1,74 @@
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useRootNavigationState } from 'expo-router';
-import { useAppSelector } from '@/store/hooks'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import BookIcon from '@/assets/icons/BookIcon.svg';
 import Checkmark from '@/assets/icons/Checkmark.svg';
 import commonStyles from '@/constants/commonStyles';
 import theme from '@/constants/theme';
 import { useEffect } from 'react';
+import wordBooks from '@/constants/wordBooks';
+import { makePlan, Task } from '@/store/plan';
+import { ProgressByBookType, dayOfToday } from '@/store/userProfile';
+import { makeWordList } from '@/store/wordList';
+import { getTaskTitle } from '@/constants/globals';
 
 export default function TaskScreen() {
-  const currentBookKey = useAppSelector(state => state.userProfile.currentBookKey)
-  const progressByBook = useAppSelector(state => state.userProfile.progressByBook)
-  console.log('userProgress', progressByBook);
+  const currentBookKey:string = useAppSelector(state => state.userProfile.currentBookKey)
+  const progressByBook:ProgressByBookType = useAppSelector(state => state.userProfile.progressByBook)
+  const todayTasks = useAppSelector(state => state.plan.todayTasks)
+  const tomorrowTasks = useAppSelector(state => state.plan.tomorrowTasks)
+  const currentBook = wordBooks.find(b => b.key === currentBookKey)
+  let progress = progressByBook[currentBookKey]
+  let dayIndex = progress ? dayOfToday(progress) : 0
 
+  const dispatch = useAppDispatch()
+  console.log('userProgress', progress);
+
+  // jump to book select screen if user hasn't selected a book
   const rootNavigationState = useRootNavigationState();
   const navigatorReady = rootNavigationState?.key != null
-  useEffect(() => {
+  useEffect(() => { 
     if (!navigatorReady) return
-    if (currentBookKey === '') {
+    if (currentBookKey === '' || !wordBooks.some(b => b.key === currentBookKey)) {
       router.navigate('/bookSelect')
     }
   }, [navigatorReady])
   
+  useEffect(() => { // make plans for today and tomorrow
+    if (currentBookKey === '' || !(currentBookKey in progressByBook)) return;
+    const progress = progressByBook[currentBookKey]
+    dispatch(makePlan({bookKey: currentBookKey, ...progress }))
+  }, [progressByBook, currentBookKey])
+
+  const renderTasks = (tasks:Task[], disabled:boolean) => {
+    return tasks.map((task, index) => (
+      <View key={index} style={styles.checkboxListItem} onTouchEnd={() => {
+          if(disabled) return
+          router.navigate('/listDetail')
+          dispatch(makeWordList({bookKey: currentBookKey, ...progress, dayIndex: task.day, isRevisit: task.isRevisit}))
+        }}>
+          {task.finished ?
+            <View style={styles.checkboxListCheckboxSelected}>
+                <Checkmark/>
+            </View>
+              :
+            <View style={styles.checkboxListCheckbox}>
+            </View>
+          }
+          <Text style={styles.checkboxListText}>{getTaskTitle(task.day, task.isRevisit)}</Text>
+      </View>
+    ))
+  }
   
   return (
     <SafeAreaView style={commonStyles.masterContainer}>
         <View style={commonStyles.row}>
             <View style={commonStyles.fill}>
                 <Text style={commonStyles.h1}>今日任务</Text>
-                <Text style={commonStyles.auxText}>第10/20天 日语N1单词</Text>
+                <Text style={commonStyles.auxText}>第{dayIndex+1}/{progress ? progress.planDays : '?'}天 {currentBook?.name}</Text>
             </View>
             <View style={styles.changeBookButton} onTouchEnd={() => router.navigate('/bookSelect')}>
                 {/* <Image source={require('@/assets/images/bookIcon.png')}/> */}
@@ -38,30 +76,16 @@ export default function TaskScreen() {
                 <Text style={styles.changeBookButtonText}>换书</Text>
             </View>
         </View>
-        <View style={styles.checkboxList}>
-            
-              <View style={styles.checkboxListItem} onTouchEnd={() => router.navigate('/listDetail')}>
-                <View style={styles.checkboxListCheckboxSelected}>
-                    <Checkmark/>
-                </View>
-                <Text style={styles.checkboxListText}>List 2</Text>
-              </View>
-            
-            <View style={styles.checkboxListItem}>
-                <View style={styles.checkboxListCheckbox}>
-                </View>
-                <Text style={styles.checkboxListText}>List 2 当日复习</Text>
-            </View>
-        </View>
+        <ScrollView>
+          <View style={styles.checkboxList}>
+              { renderTasks(todayTasks, false) }
+          </View>
 
-        <View style={styles.checkboxList}>
-            <Text style={commonStyles.dimmedH2}>明日任务</Text>
-            <View style={styles.checkboxListItem}>
-                <View style={styles.checkboxListCheckbox}>
-                </View>
-                <Text style={styles.checkboxListText}>List 2 复习</Text>
-            </View>
-        </View>
+          <View style={styles.checkboxList}>
+              <Text style={commonStyles.dimmedH2}>明日任务</Text>
+              { renderTasks(tomorrowTasks, true) }
+          </View>
+        </ScrollView>
     </SafeAreaView>
   );
 }
@@ -85,7 +109,8 @@ const styles = StyleSheet.create({
   },
 
   checkboxList: {
-    gap: 8
+    gap: 8,
+    marginBottom: 28,
   },
 
   checkboxListItem: {

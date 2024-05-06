@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import userProfileReducer from './userProfile';
 import bookListReducer from './bookList';
+import planReducer from './plan';
+import wordListReducer from './wordList';
 
 const rootConfig = {
     key: 'root',
@@ -16,18 +18,24 @@ const userProfileConfig = {
     storage: AsyncStorage,
 }
 
+const reducers = {
+    userProfile: persistReducer(userProfileConfig, userProfileReducer), 
+    bookList: bookListReducer,
+    plan: planReducer,
+    wordList: wordListReducer,
+}
+
+const storeForTyping = configureStore({
+    reducer: reducers
+})
+
 export const store = configureStore({
-    reducer: persistReducer(rootConfig, combineReducers({
-        userProfile: persistReducer(userProfileConfig, userProfileReducer),
-        bookList: bookListReducer,
-    })),
+    reducer: persistReducer(rootConfig, combineReducers(reducers)),
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({
-        serializableCheck: {
-            ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER]
-        }
+        serializableCheck: false
     })
 })
 
 export const persistor = persistStore(store)
-export type RootState = ReturnType<typeof store.getState>
+export type RootState = ReturnType<typeof storeForTyping.getState>
 export type AppDispatch = typeof store.dispatch
