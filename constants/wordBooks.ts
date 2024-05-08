@@ -7,5 +7,9 @@ export default [
         importFun: async () => await import('@/assets/wordBooks/n3_words.json')},
     { key: 'n4n5_words', name: '日语N4,N5词汇',  lang:'日语', wordCount: 2000, 
         importFun: async () => await import('@/assets/wordBooks/n4n5_words.json')},
+    { key: 'toefl', name: '托福词汇',  lang:'英语', wordCount: 4516, 
+        importFun: async () => await import('@/assets/wordBooks/toefl.json')},
+    { key: 'gre', name: 'GRE词汇',  lang:'英语', wordCount: 6193, 
+        importFun: async () => await import('@/assets/wordBooks/gre.json')},
 
 ]
