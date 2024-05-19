@@ -76,12 +76,11 @@ const WordListItem = ({word, detail, scrollY, wordIndex, favorited=false}:WordLi
     }
 
     return <View style={styles.wordListItem} 
-            onLayout={(e) => { setSelfLayoutY(e.nativeEvent.layout.y) }}
-            onTouchEnd={() => { 
+            onLayout={(e) => { setSelfLayoutY(e.nativeEvent.layout.y) }}>
+        <TouchableOpacity onPress={() => { 
                 dispatch(toggleFavorite(wordIndex))
                 dispatch(saveFavourite({wordIndex: wordIndex, isFavorated: !favorited}))
             }}>
-        <TouchableOpacity>
             <View style={styles.wordListFavorateButton}>
                 {favorited ? <FavIconSelected/> : <FavIcon/>}
             </View>
